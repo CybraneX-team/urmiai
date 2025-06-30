@@ -4,7 +4,7 @@ import {
   FaGoogle, 
   FaGithub, 
   FaTwitter, 
-  FaEnvelope, 
+  FaPhone, 
   FaLock, 
   FaUser, 
   FaUserPlus, 
@@ -20,80 +20,97 @@ import '../components/auth/Auth.css';
 
 export default function RegisterRoute() {
   const [username, setUsername] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [otp, setOtp] = useState('');
   const [loading, setLoading] = useState(false);
+  const [otpSent, setOtpSent] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
   
-  const { signUp, googleSignIn, githubSignIn, twitterSignIn } = useAuth();
+  const { phoneSignUp, verifyPhoneOtp, googleSignIn, githubSignIn, twitterSignIn } = useAuth();
   const navigate = useNavigate();
 
-  // Password strength checks
-  const hasMinLength = password.length >= 8;
-  const hasUpperCase = /[A-Z]/.test(password);
-  const hasLowerCase = /[a-z]/.test(password);
-  const hasNumber = /[0-9]/.test(password);
-  const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
-  
-  const passwordStrength = [
-    hasMinLength,
-    hasUpperCase,
-    hasLowerCase,
-    hasNumber,
-    hasSpecialChar
-  ].filter(Boolean).length;
-
-  const getPasswordStrengthLabel = () => {
-    if (password.length === 0) return '';
-    if (passwordStrength <= 2) return 'Weak';
-    if (passwordStrength <= 4) return 'Medium';
-    return 'Strong';
+  // Format phone number with country code
+  const formatPhoneNumber = (phone: string) => {
+    // Remove all non-digits
+    const digits = phone.replace(/\D/g, '');
+    
+    // Add +91 if not present (assuming Indian numbers)
+    if (digits.length === 10) {
+      return `+91${digits}`;
+    } else if (digits.length === 12 && digits.startsWith('91')) {
+      return `+${digits}`;
+    } else if (digits.length === 13 && digits.startsWith('91')) {
+      return `+${digits}`;
+    }
+    
+    return phone.startsWith('+') ? phone : `+${digits}`;
   };
 
-  const getStrengthColor = () => {
-    if (password.length === 0) return '#777';
-    if (passwordStrength <= 2) return '#ff3b30';
-    if (passwordStrength <= 4) return '#ffcc00';
-    return '#34c759';
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!username.trim()) {
       return toast.error('Please enter a username');
     }
     
-    if (!email.trim()) {
-      return toast.error('Please enter your email');
-    }
-    
-    if (password.length < 8) {
-      return toast.error('Password must be at least 8 characters long');
-    }
-    
-    if (passwordStrength < 3) {
-      return toast.error('Please use a stronger password');
-    }
-    
-    if (password !== confirmPassword) {
-      return toast.error('Passwords do not match');
+    if (!phoneNumber.trim()) {
+      return toast.error('Please enter your phone number');
     }
     
     if (!termsAccepted) {
       return toast.error('Please accept the terms and conditions');
     }
+
+    const formattedPhone = formatPhoneNumber(phoneNumber);
+    
+    // Basic phone number validation
+    if (!/^\+[1-9]\d{1,14}$/.test(formattedPhone)) {
+      return toast.error('Please enter a valid phone number');
+    }
     
     try {
       setLoading(true);
-      const userCredential = await signUp(email, password);
+      await phoneSignUp(formattedPhone);
+      
+      setOtpSent(true);
+      toast.success('OTP sent to your phone number!');
+    } catch (error: any) {
+      let errorMessage = 'Failed to send OTP';
+      
+      if (error.code === 'auth/invalid-phone-number') {
+        errorMessage = 'Invalid phone number format';
+      } else if (error.code === 'auth/too-many-requests') {
+        errorMessage = 'Too many requests. Please try again later';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      toast.error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!otp.trim()) {
+      return toast.error('Please enter the OTP');
+    }
+    
+    if (otp.length !== 6) {
+      return toast.error('OTP must be 6 digits');
+    }
+    
+    try {
+      setLoading(true);
+      const userCredential = await verifyPhoneOtp(otp);
       
       // This is where you would save additional user data like username to your database
       // For example, using Firebase Firestore:
       // await setDoc(doc(db, "users", userCredential.user.uid), {
       //   username,
-      //   email,
+      //   phoneNumber,
       //   createdAt: new Date(),
       // });
       
@@ -104,14 +121,12 @@ export default function RegisterRoute() {
         navigate('/login', { state: { registered: true } });
       }, 1500);
     } catch (error: any) {
-      let errorMessage = 'Failed to create an account';
+      let errorMessage = 'Invalid OTP';
       
-      if (error.code === 'auth/email-already-in-use') {
-        errorMessage = 'Email is already in use';
-      } else if (error.code === 'auth/invalid-email') {
-        errorMessage = 'Invalid email address';
-      } else if (error.code === 'auth/weak-password') {
-        errorMessage = 'Password is too weak';
+      if (error.code === 'auth/invalid-verification-code') {
+        errorMessage = 'Invalid OTP code';
+      } else if (error.code === 'auth/code-expired') {
+        errorMessage = 'OTP has expired. Please request a new one';
       } else if (error.message) {
         errorMessage = error.message;
       }
@@ -148,6 +163,11 @@ export default function RegisterRoute() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const resetForm = () => {
+    setOtpSent(false);
+    setOtp('');
   };
 
   return (
@@ -207,140 +227,110 @@ export default function RegisterRoute() {
             <p className="auth-subtitle">Fill in your details to get started</p>
           </div>
         
-          <form onSubmit={handleSubmit} className="auth-form">
-            <div className="form-group">
-              <label htmlFor="username" className="form-label">
-                <FaUser className="input-icon" /> Username
-              </label>
-              <input
-                type="text"
-                id="username"
-                className="form-input"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                required
-                placeholder="johndoe"
-                disabled={loading}
-                autoFocus
-              />
-            </div>
-        
-            <div className="form-group">
-              <label htmlFor="email" className="form-label">
-                <FaEnvelope className="input-icon" /> Email
-              </label>
-              <input
-                type="email"
-                id="email"
-                className="form-input"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                placeholder="your@email.com"
-                disabled={loading}
-              />
-            </div>
-          
-            <div className="form-row">
-              <div className="form-group">
-                <label htmlFor="password" className="form-label">
-                  <FaLock className="input-icon" /> Password
-                </label>
-                <input
-                  type="password"
-                  id="password"
-                  className="form-input"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  placeholder="••••••••"
-                  disabled={loading}
-                />
-              
-                {password && (
-                  <div className="password-strength">
-                    <div className="strength-meter">
-                      <div 
-                        className="strength-meter-fill" 
-                        style={{ 
-                          width: `${(passwordStrength / 5) * 100}%`,
-                          backgroundColor: getStrengthColor()
-                        }}
-                      ></div>
-                    </div>
-                    <span style={{ color: getStrengthColor() }}>
-                      {getPasswordStrengthLabel()}
-                    </span>
-                  </div>
-                )}
-              </div>
-              
-              <div className="form-group">
-                <label htmlFor="confirmPassword" className="form-label">
-                  <FaLock className="input-icon" /> Confirm Password
-                </label>
-                <input
-                  type="password"
-                  id="confirmPassword"
-                  className="form-input"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  required
-                  placeholder="••••••••"
-                  disabled={loading}
-                />
-                
-                {confirmPassword && (
-                  <div className={`password-match ${password === confirmPassword ? 'match' : 'no-match'}`}>
-                    <FaCheckCircle />
-                    {password === confirmPassword ? 'Passwords match' : 'Passwords do not match'}
-                  </div>
-                )}
-              </div>
-            </div>
+          <form onSubmit={otpSent ? handleVerifyOtp : handleSendOtp} className="auth-form">
+            {!otpSent ? (
+              <>
+                <div className="form-group">
+                  <label htmlFor="username" className="form-label">
+                    <FaUser className="input-icon" /> Username
+                  </label>
+                  <input
+                    type="text"
+                    id="username"
+                    className="form-input"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    required
+                    placeholder="Enter your username"
+                    disabled={loading}
+                    autoFocus
+                  />
+                </div>
             
-            {password && (
-              <div className="password-requirements">
-                <div className={`requirement ${hasMinLength ? 'met' : ''}`}>
-                  {hasMinLength ? <FaCheckCircle /> : '•'} 8+ characters
+                <div className="form-group">
+                  <label htmlFor="phoneNumber" className="form-label">
+                    <FaPhone className="input-icon" /> Phone Number
+                  </label>
+                  <input
+                    type="text"
+                    id="phoneNumber"
+                    className="form-input"
+                    value={phoneNumber}
+                    onChange={(e) => setPhoneNumber(e.target.value)}
+                    required
+                    placeholder="+91XXXXXXXXXX"
+                    disabled={loading}
+                  />
                 </div>
-                <div className={`requirement ${hasUpperCase ? 'met' : ''}`}>
-                  {hasUpperCase ? <FaCheckCircle /> : '•'} Uppercase
+                
+                <div className="form-options">
+                  <label className="checkbox-container">
+                    <input
+                      type="checkbox"
+                      checked={termsAccepted}
+                      onChange={(e) => setTermsAccepted(e.target.checked)}
+                      disabled={loading}
+                    />
+                    <span className="checkmark"></span>
+                    I agree to the &nbsp;{'  '}
+                    <Link to="/terms" className="auth-link">Terms & Conditions</Link>{'  '}
+                    &nbsp;and&nbsp;{'  '}
+                    <Link to="/privacy" className="auth-link">Privacy Policy</Link>
+                  </label>
                 </div>
-                <div className={`requirement ${hasLowerCase ? 'met' : ''}`}>
-                  {hasLowerCase ? <FaCheckCircle /> : '•'} Lowercase
+                
+                <button 
+                  type="submit" 
+                  className="auth-btn primary-btn"
+                  disabled={loading}
+                >
+                  {loading ? 'Sending OTP...' : 'Send OTP'}
+                </button>
+              </>
+            ) : (
+              <>
+                <div className="form-group">
+                  <label htmlFor="otp" className="form-label">
+                    <FaLock className="input-icon" /> Enter OTP
+                  </label>
+                  <input
+                    type="text"
+                    id="otp"
+                    className="form-input"
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    required
+                    placeholder="Enter 6-digit OTP"
+                    disabled={loading}
+                    autoFocus
+                    maxLength={6}
+                  />
+                  <small className="form-help">
+                    OTP sent to {phoneNumber}
+                  </small>
                 </div>
-                <div className={`requirement ${hasNumber ? 'met' : ''}`}>
-                  {hasNumber ? <FaCheckCircle /> : '•'} Number
-                </div>
-                <div className={`requirement ${hasSpecialChar ? 'met' : ''}`}>
-                  {hasSpecialChar ? <FaCheckCircle /> : '•'} Special char
-                </div>
-              </div>
+                
+                <button 
+                  type="submit" 
+                  className="auth-btn primary-btn"
+                  disabled={loading}
+                >
+                  {loading ? 'Creating Account...' : 'Create Account'}
+                </button>
+                
+                <button 
+                  type="button" 
+                  className="auth-btn secondary-btn"
+                  onClick={resetForm}
+                  disabled={loading}
+                >
+                  Change Phone Number
+                </button>
+              </>
             )}
             
-            <div className="form-options">
-              <label className="checkbox-container">
-                <input
-                  type="checkbox"
-                  checked={termsAccepted}
-                  onChange={(e) => setTermsAccepted(e.target.checked)}
-                  disabled={loading}
-                />
-                <span className="checkmark"></span>
-                <span className="terms-container">
-                  I accept the <Link to="/terms" className="auth-link">Terms of Service</Link> and <Link to="/privacy" className="auth-link">Privacy Policy</Link>
-                </span>
-              </label>
-            </div>
-            
-            <button 
-              type="submit" 
-              className="auth-btn primary-btn"
-              disabled={loading}
-            >
-              {loading ? 'Creating Account...' : 'Create Account'}
-            </button>
+            {/* Hidden recaptcha container */}
+            <div id="recaptcha-container"></div>
             
             <div className="social-divider">
               <span>or sign up with</span>

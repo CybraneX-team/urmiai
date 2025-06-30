@@ -4,7 +4,7 @@ import {
   FaGoogle, 
   FaGithub, 
   FaTwitter, 
-  FaEnvelope, 
+  FaPhone, 
   FaLock, 
   FaUserCircle, 
   FaShieldAlt, 
@@ -17,12 +17,13 @@ import { useAuth } from '../context/AuthContext';
 import '../components/auth/Auth.css';
 
 export default function LoginRoute() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [otp, setOtp] = useState('');
   const [loading, setLoading] = useState(false);
+  const [otpSent, setOtpSent] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   
-  const { login, googleSignIn, githubSignIn, twitterSignIn, currentUser } = useAuth();
+  const { phoneLogin, verifyPhoneOtp, googleSignIn, githubSignIn, twitterSignIn, currentUser } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   
@@ -45,41 +46,95 @@ export default function LoginRoute() {
     }
   }, [location]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // Format phone number with country code
+  const formatPhoneNumber = (phone: string) => {
+    // Remove all non-digits
+    const digits = phone.replace(/\D/g, '');
     
-    if (!email.trim()) {
-      return toast.error('Please enter your email');
+    // Add +91 if not present (assuming Indian numbers)
+    if (digits.length === 10) {
+      return `+91${digits}`;
+    } else if (digits.length === 12 && digits.startsWith('91')) {
+      return `+${digits}`;
+    } else if (digits.length === 13 && digits.startsWith('91')) {
+      return `+${digits}`;
     }
     
-    if (!password) {
-      return toast.error('Please enter your password');
+    return phone.startsWith('+') ? phone : `+${digits}`;
+  };
+
+  const handleSendOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!phoneNumber.trim()) {
+      return toast.error('Please enter your phone number');
+    }
+    
+    const formattedPhone = formatPhoneNumber(phoneNumber);
+    
+    // Basic phone number validation
+    if (!/^\+[1-9]\d{1,14}$/.test(formattedPhone)) {
+      return toast.error('Please enter a valid phone number');
     }
     
     try {
       setLoading(true);
-      await login(email, password);
+      await phoneLogin(formattedPhone);
+      
+      setOtpSent(true);
+      toast.success('OTP sent to your phone number!');
+      
+      // Store phone number in localStorage if remember me is checked
+      if (rememberMe) {
+        localStorage.setItem('rememberedPhone', phoneNumber);
+      } else {
+        localStorage.removeItem('rememberedPhone');
+      }
+    } catch (error: any) {
+      let errorMessage = 'Failed to send OTP';
+      
+      if (error.code === 'auth/invalid-phone-number') {
+        errorMessage = 'Invalid phone number format';
+      } else if (error.code === 'auth/too-many-requests') {
+        errorMessage = 'Too many requests. Please try again later';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      toast.error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!otp.trim()) {
+      return toast.error('Please enter the OTP');
+    }
+    
+    if (otp.length !== 6) {
+      return toast.error('OTP must be 6 digits');
+    }
+    
+    try {
+      setLoading(true);
+      await verifyPhoneOtp(otp);
       
       toast.success('Login successful!');
-      
-      // Store email in localStorage if remember me is checked
-      if (rememberMe) {
-        localStorage.setItem('rememberedEmail', email);
-      } else {
-        localStorage.removeItem('rememberedEmail');
-      }
       
       // Redirect after a short delay to allow toast to be seen
       setTimeout(() => {
         navigate(from, { replace: true });
       }, 1000);
     } catch (error: any) {
-      let errorMessage = 'Failed to log in';
+      let errorMessage = 'Invalid OTP';
       
-      if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
-        errorMessage = 'Invalid email or password';
-      } else if (error.code === 'auth/too-many-requests') {
-        errorMessage = 'Too many login attempts. Please try again later';
+      if (error.code === 'auth/invalid-verification-code') {
+        errorMessage = 'Invalid OTP code';
+      } else if (error.code === 'auth/code-expired') {
+        errorMessage = 'OTP has expired. Please request a new one';
       } else if (error.message) {
         errorMessage = error.message;
       }
@@ -118,14 +173,20 @@ export default function LoginRoute() {
     }
   };
 
-  // Load remembered email on component mount
+  // Load remembered phone number on component mount
   useEffect(() => {
-    const rememberedEmail = localStorage.getItem('rememberedEmail');
-    if (rememberedEmail) {
-      setEmail(rememberedEmail);
+    const rememberedPhone = localStorage.getItem('rememberedPhone');
+    if (rememberedPhone) {
+      setPhoneNumber(rememberedPhone);
       setRememberMe(true);
     }
   }, []);
+
+  const resetForm = () => {
+    setOtpSent(false);
+    setOtp('');
+    setPhoneNumber('');
+  };
 
   return (
     <div className="auth-container">
@@ -184,64 +245,91 @@ export default function LoginRoute() {
             <p className="auth-subtitle">Enter your credentials to continue</p>
           </div>
           
-          <form onSubmit={handleSubmit} className="auth-form">
-            <div className="form-group">
-              <label htmlFor="email" className="form-label">
-                <FaEnvelope className="input-icon" /> Email
-              </label>
-              <input
-                type="email"
-                id="email"
-                className="form-input"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                placeholder="your@email.com"
-                disabled={loading}
-                autoFocus
-              />
-            </div>
-            
-            <div className="form-group">
-              <label htmlFor="password" className="form-label">
-                <FaLock className="input-icon" /> Password
-              </label>
-              <input
-                type="password"
-                id="password"
-                className="form-input"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                placeholder="••••••••"
-                disabled={loading}
-              />
-            </div>
-            
-            <div className="form-options">
-              <label className="checkbox-container">
-                <input
-                  type="checkbox"
-                  checked={rememberMe}
-                  onChange={(e) => setRememberMe(e.target.checked)}
+          <form onSubmit={otpSent ? handleVerifyOtp : handleSendOtp} className="auth-form">
+            {!otpSent ? (
+              <>
+                <div className="form-group">
+                  <label htmlFor="phoneNumber" className="form-label">
+                    <FaPhone className="input-icon" /> Phone Number
+                  </label>
+                  <input
+                    type="text"
+                    id="phoneNumber"
+                    className="form-input"
+                    value={phoneNumber}
+                    onChange={(e) => setPhoneNumber(e.target.value)}
+                    required
+                    placeholder="+91XXXXXXXXXX"
+                    disabled={loading}
+                    autoFocus
+                  />
+                </div>
+
+                <div className="form-options">
+                  <label className="checkbox-container">
+                    <input
+                      type="checkbox"
+                      checked={rememberMe}
+                      onChange={(e) => setRememberMe(e.target.checked)}
+                      disabled={loading}
+                    />
+                    <span className="checkmark"></span>
+                    Remember phone number
+                  </label>
+                </div>
+                
+                <button 
+                  type="submit" 
+                  className="auth-btn primary-btn"
                   disabled={loading}
-                />
-                <span className="checkmark"></span>
-                Remember me
-              </label>
-              
-              <Link to="/forgot-password" className="auth-link">
-                Forgot Password?
-              </Link>
-            </div>
+                >
+                  {loading ? 'Sending OTP...' : 'Send OTP'}
+                </button>
+              </>
+            ) : (
+              <>
+                <div className="form-group">
+                  <label htmlFor="otp" className="form-label">
+                    <FaLock className="input-icon" /> Enter OTP
+                  </label>
+                  <input
+                    type="text"
+                    id="otp"
+                    className="form-input"
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    required
+                    placeholder="Enter 6-digit OTP"
+                    disabled={loading}
+                    autoFocus
+                    maxLength={6}
+                  />
+                  <small className="form-help">
+                    OTP sent to {phoneNumber}
+                  </small>
+                </div>
+                
+                <button 
+                  type="submit" 
+                  className="auth-btn primary-btn"
+                  disabled={loading}
+                >
+                  {loading ? 'Verifying...' : 'Verify OTP'}
+                </button>
+                
+                <button 
+                  type="button" 
+                  className="auth-btn secondary-btn"
+                  onClick={resetForm}
+                  disabled={loading}
+                >
+                  Change Phone Number
+                </button>
+              </>
+            )}
             
-            <button 
-              type="submit" 
-              className="auth-btn primary-btn"
-              disabled={loading}
-            >
-              {loading ? 'Signing In...' : 'Sign In'}
-            </button>
+            {/* Hidden recaptcha container */}
+            <div id="recaptcha-container"></div>
             
             <div className="social-divider">
               <span>or continue with</span>

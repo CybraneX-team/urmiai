@@ -8,7 +8,9 @@ import {
   sendPasswordResetEmail,
   signInWithPopup,
   RecaptchaVerifier,
-  signInWithPhoneNumber
+  signInWithPhoneNumber,
+  PhoneAuthProvider,
+  signInWithCredential
 } from 'firebase/auth';
 import { auth, googleProvider, githubProvider, twitterProvider } from '../config/firebase';
 
@@ -18,6 +20,9 @@ type AuthContextType = {
   authError: string | null;
   signUp: (email: string, password: string) => Promise<any>;
   login: (email: string, password: string) => Promise<any>;
+  phoneLogin: (phoneNumber: string) => Promise<any>;
+  phoneSignUp: (phoneNumber: string) => Promise<any>;
+  verifyPhoneOtp: (otp: string) => Promise<any>;
   logout: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   googleSignIn: () => Promise<any>;
@@ -42,6 +47,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState<string | null>(null);
   const [confirmationResult, setConfirmationResult] = useState<any>(null);
+  const [recaptchaVerifier, setRecaptchaVerifier] = useState<RecaptchaVerifier | null>(null);
 
   useEffect(() => {
     // Set a timeout to ensure loading state doesn't get stuck
@@ -71,7 +77,57 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, []);
 
-  // Email/Password Authentication
+  // Initialize RecaptchaVerifier
+  const initializeRecaptcha = () => {
+    if (!recaptchaVerifier) {
+      const verifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+        'size': 'invisible',
+        'callback': () => {
+          // reCAPTCHA solved, allow signInWithPhoneNumber.
+        }
+      });
+      setRecaptchaVerifier(verifier);
+      return verifier;
+    }
+    return recaptchaVerifier;
+  };
+
+  // Phone Number Authentication
+  const phoneLogin = async (phoneNumber: string) => {
+    try {
+      const verifier = initializeRecaptcha();
+      const confirmationResult = await signInWithPhoneNumber(auth, phoneNumber, verifier);
+      setConfirmationResult(confirmationResult);
+      return confirmationResult;
+    } catch (error: any) {
+      console.error('Error during phone login:', error);
+      setAuthError(error.message);
+      throw error;
+    }
+  };
+
+  const phoneSignUp = async (phoneNumber: string) => {
+    // For phone number, signup and login are the same process
+    return phoneLogin(phoneNumber);
+  };
+
+  const verifyPhoneOtp = async (otp: string) => {
+    if (!confirmationResult) {
+      const error = 'No confirmation result available';
+      setAuthError(error);
+      throw new Error(error);
+    }
+    try {
+      const result = await confirmationResult.confirm(otp);
+      return result;
+    } catch (error: any) {
+      console.error('Error verifying OTP:', error);
+      setAuthError(error.message);
+      throw error;
+    }
+  };
+
+  // Email/Password Authentication (keeping for backward compatibility)
   const signUp = (email: string, password: string) => {
     return createUserWithEmailAndPassword(auth, email, password);
   };
@@ -81,6 +137,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = () => {
+    // Clean up recaptcha verifier on logout
+    if (recaptchaVerifier) {
+      recaptchaVerifier.clear();
+      setRecaptchaVerifier(null);
+    }
+    setConfirmationResult(null);
     return signOut(auth);
   };
 
@@ -101,30 +163,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return signInWithPopup(auth, twitterProvider);
   };
 
-  // Phone Authentication
+  // Phone Authentication (legacy methods for backward compatibility)
   const setupRecaptcha = async (phoneNumber: string) => {
-    try {
-      const recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-        'size': 'invisible'
-      });
-      
-      const confirmationResult = await signInWithPhoneNumber(auth, phoneNumber, recaptchaVerifier);
-      setConfirmationResult(confirmationResult);
-      return confirmationResult;
-    } catch (error: any) {
-      console.error('Error during phone authentication setup:', error);
-      setAuthError(error.message);
-      throw error;
-    }
+    return phoneLogin(phoneNumber);
   };
 
   const verifyOtp = async (otp: string) => {
-    if (!confirmationResult) {
-      const error = 'No confirmation result available';
-      setAuthError(error);
-      throw new Error(error);
-    }
-    return confirmationResult.confirm(otp);
+    return verifyPhoneOtp(otp);
   };
 
   const value = {
@@ -133,6 +178,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     authError,
     signUp,
     login,
+    phoneLogin,
+    phoneSignUp,
+    verifyPhoneOtp,
     logout,
     resetPassword,
     googleSignIn,

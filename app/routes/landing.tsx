@@ -1,10 +1,13 @@
 import React, { useEffect, useRef } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { motion, useScroll, useTransform, useSpring } from "framer-motion";
+import { useAuth } from "../context/AuthContext";
 import "./landing.css";
 
 export default function LandingPage() {
   const heroRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
+  const { currentUser } = useAuth();
 
   // Use framer-motion's useScroll hook instead of manual scroll handling
   const { scrollY } = useScroll();
@@ -64,31 +67,45 @@ export default function LandingPage() {
 
         {/* Navigation Links */}
         <div className="landing-nav-links">
-          <Link to="/" className="landing-nav-link active">
-            Overview
-          </Link>
-          <Link to="/document" className="landing-nav-link">
-            Document
-          </Link>
-          <Link to="/messages" className="landing-nav-link">
-            Messages
-          </Link>
-          <Link to="/labs" className="landing-nav-link">
-            Labs
-          </Link>
+          <a href="#hero" className="landing-nav-link active">
+            Home
+          </a>
+          <a href="#about" className="landing-nav-link">
+            About Us
+          </a>
+          <a href="#features" className="landing-nav-link">
+            Features
+          </a>
+          <a href="#pricing" className="landing-nav-link">
+            Pricing
+          </a>
+          <a href="#industries" className="landing-nav-link">
+            Industries
+          </a>
         </div>
 
-        {/* Login Button & Avatar */}
+        {/* Demo Dashboard Button & Avatar */}
         <div className="landing-nav-right">
-          <Link to="/login" className="landing-nav-button login-button">
-            Login
-          </Link>
-          <div className="avatar"></div>
+          <button
+            onClick={() => {
+              if (currentUser) {
+                // If user is logged in, navigate to dashboard
+                navigate('/dashboard');
+              } else {
+                // If user is not logged in, navigate to login
+                navigate('/login');
+              }
+            }}
+            className="landing-nav-button login-button"
+          >
+            Demo Dashboard
+          </button>
         </div>
       </nav>
 
       {/* Hero Section */}
       <motion.div
+        id="hero"
         className="hero-section"
         ref={heroRef}
         style={{
@@ -178,7 +195,7 @@ export default function LandingPage() {
       {/* Content sections will go here */}
       <div className="landing-content">
         <div className="spacer"></div>
-        <section className="feature-section">
+        <section id="about" className="feature-section">
           <div className="feature-bg">
             {/* <svg width="1300" height="400" viewBox="0 0 1520 569" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M204.674 568.033C163.111 568.033 127.004 560.24 96.3514 544.654C65.6991 529.068 42.0605 507.507 25.4355 479.972C8.81049 452.437 0.498002 420.746 0.498002 384.898V198.646C0.498002 154.486 9.33002 117.859 26.9941 88.7657C45.1776 59.1524 69.8553 37.0723 101.027 22.5255C132.719 7.97864 168.826 0.705207 209.349 0.705207C249.873 0.705207 284.941 7.45911 314.554 20.9669C344.687 34.4747 367.806 53.9571 383.912 79.4141C400.537 104.871 408.849 135.264 408.849 170.592H307.541C307.541 148.771 300.007 129.809 284.941 113.703C269.875 97.5977 244.677 89.545 209.349 89.545C174.541 89.545 147.525 98.6368 128.303 116.82C109.599 135.004 100.248 160.201 100.248 192.412V248.521H114.275C123.107 238.131 136.615 228.26 154.799 218.908C172.982 209.557 199.478 204.881 234.287 204.881C265.978 204.881 295.072 211.635 321.568 225.142C348.584 238.65 370.404 258.392 387.029 284.369C403.654 309.826 411.966 340.738 411.966 377.105V386.457C411.966 422.304 403.394 453.996 386.25 481.531C369.105 508.546 344.947 529.847 313.775 545.433C282.603 560.5 246.236 568.033 204.674 568.033ZM206.232 479.193C238.963 479.193 264.679 470.621 283.382 453.476C302.605 436.332 312.216 413.472 312.216 384.898V378.664C312.216 359.441 307.8 342.816 298.968 328.789C290.656 314.762 278.447 303.851 262.341 296.058C246.756 288.265 228.052 284.369 206.232 284.369C184.931 284.369 166.228 288.265 150.123 296.058C134.017 303.851 121.549 314.762 112.717 328.789C104.404 342.816 100.248 359.441 100.248 378.664V384.898C100.248 413.472 109.599 436.332 128.303 453.476C147.525 470.621 173.502 479.193 206.232 479.193ZM695.758 568.033C631.336 568.033 579.643 550.369 540.678 515.041C501.713 479.193 482.231 425.162 482.231 352.947V215.791C482.231 145.654 501.713 92.4024 540.678 56.0353C579.643 19.1486 631.336 0.705207 695.758 0.705207C760.699 0.705207 812.392 19.1486 850.838 56.0353C889.803 92.4024 909.285 145.654 909.285 215.791V352.947C909.285 425.162 889.803 479.193 850.838 515.041C812.392 550.369 760.699 568.033 695.758 568.033ZM695.758 479.193C734.723 479.193 763.297 468.543 781.48 447.242C800.184 425.941 809.535 395.549 809.535 356.064V211.115C809.535 171.111 799.144 140.979 778.363 120.717C758.102 99.9356 730.566 89.545 695.758 89.545C659.91 89.545 631.856 100.195 611.594 121.496C591.852 142.797 581.981 172.67 581.981 211.115V356.064C581.981 397.107 591.332 428.019 610.035 448.8C629.258 469.062 657.832 479.193 695.758 479.193ZM1063.93 567.253L1004.7 519.716L1423.96 1.48449L1483.19 49.0216L1063.93 567.253ZM1392.79 564.916C1353.31 564.916 1322.39 554.525 1300.05 533.744C1277.71 512.443 1266.54 483.609 1266.54 447.242V441.787C1266.54 404.9 1277.71 376.066 1300.05 355.285C1322.39 333.984 1353.31 323.334 1392.79 323.334C1431.23 323.334 1461.89 333.984 1484.75 355.285C1507.61 376.066 1519.04 404.9 1519.04 441.787V447.242C1519.04 483.609 1507.87 512.443 1485.53 533.744C1463.19 554.525 1432.27 564.916 1392.79 564.916ZM1392.79 501.013C1407.86 501.013 1419.55 496.337 1427.86 486.986C1436.69 477.634 1441.11 465.425 1441.11 450.359V437.89C1441.11 422.824 1436.69 410.615 1427.86 401.263C1419.55 391.912 1407.86 387.236 1392.79 387.236C1377.72 387.236 1365.77 391.912 1356.94 401.263C1348.63 410.615 1344.47 422.824 1344.47 437.89V450.359C1344.47 465.425 1348.63 477.634 1356.94 486.986C1365.77 496.337 1377.72 501.013 1392.79 501.013ZM1095.1 245.404C1055.61 245.404 1024.7 235.014 1002.36 214.232C980.022 192.932 968.852 164.098 968.852 127.73V122.275C968.852 85.3887 980.022 56.5548 1002.36 35.7735C1024.7 14.4728 1055.61 3.8224 1095.1 3.8224C1133.54 3.8224 1164.2 14.4728 1187.06 35.7735C1209.91 56.5548 1221.34 85.3887 1221.34 122.275V127.73C1221.34 164.098 1210.17 192.932 1187.83 214.232C1165.49 235.014 1134.58 245.404 1095.1 245.404ZM1095.1 181.502C1110.16 181.502 1121.85 176.826 1130.17 167.475C1139 158.123 1143.41 145.914 1143.41 130.848V118.379C1143.41 103.313 1139 91.1036 1130.17 81.752C1121.85 72.4005 1110.16 67.7247 1095.1 67.7247C1080.03 67.7247 1068.08 72.4005 1059.25 81.752C1050.94 91.1036 1046.78 103.313 1046.78 118.379V130.848C1046.78 145.914 1050.94 158.123 1059.25 167.475C1068.08 176.826 1080.03 181.502 1095.1 181.502Z" fill="url(#paint0_linear_3215_18)" fill-opacity="0.35"/>
@@ -452,6 +469,7 @@ export default function LandingPage() {
 
         {/* Capabilities Section */}
         <motion.section 
+          id="features"
           className="capabilities-section"
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}
@@ -602,7 +620,7 @@ export default function LandingPage() {
         </motion.section>
 
         {/* Pricing Section */}
-        <section className="pricing-section">
+        <section id="pricing" className="pricing-section">
           <div className="pricing-container">
             <div className="pricing-header">
               <div className="pricing-title-container">
@@ -667,7 +685,7 @@ export default function LandingPage() {
               >
                 <div className="plan-tag">Starter</div>
                 <h4 className="pricing-plan-title">Basic Plan</h4>
-                <p className="pricing-plan-cost">4-6 Rs/min</p>
+                <p className="pricing-plan-cost">8-10 Rs/min</p>
                 <div className="pricing-plan-summary">Perfect for startups and growing businesses</div>
                 <div className="pricing-plan-features">
                   <p>
@@ -759,7 +777,7 @@ export default function LandingPage() {
               >
                 <div className="plan-tag enterprise">Enterprise</div>
                 <h4 className="pricing-plan-title">Enterprise Plan</h4>
-                <p className="pricing-plan-cost">8-10 Rs/min</p>
+                <p className="pricing-plan-cost">4-6 Rs/min</p>
                 <div className="pricing-plan-summary">Tailored solutions for enterprise requirements</div>
                 <div className="pricing-plan-features">
                   <p>
@@ -822,7 +840,7 @@ export default function LandingPage() {
                     </svg>
                   </motion.div>
                   <div className="guarantee-content">
-                    <p>30-day satisfaction guarantee with all plans</p>
+                    <p>Call minute volume impacts the per-minute rate</p>
                     <div className="guarantee-details">
                       <ul>
                         <li>Full refund if not satisfied</li>
@@ -1069,6 +1087,7 @@ export default function LandingPage() {
 
         {/*  Industry Use Cases Section */}
         <motion.section 
+          id="industries"
           className="industry-section"
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}

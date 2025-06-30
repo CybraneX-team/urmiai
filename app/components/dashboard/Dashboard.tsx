@@ -10,6 +10,8 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import "./Dashboard.css";
 import DashboardLayout from "./DashboardLayout";
 
@@ -93,6 +95,30 @@ const Dashboard = () => {
   const [totalCalls, setTotalCalls] = useState(0);
   const [totalSpent, setTotalSpent] = useState(0);
   const [avgCostPerCall, setAvgCostPerCall] = useState(0);
+
+  // Show dummy dashboard toast on component mount
+  useEffect(() => {
+    toast.info(
+      "🚧 This is a dummy dashboard for demonstration purposes. The full-featured dashboard will look like this after production is completed!",
+      {
+        position: "top-center",
+        autoClose: 8000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        theme: "dark",
+        style: {
+          background: "#2A282A",
+          border: "1px solid rgba(255, 255, 255, 0.1)",
+          borderLeft: "4px solid #FF335F",
+          borderRadius: "10px",
+          fontSize: "14px",
+          fontWeight: "500"
+        }
+      }
+    );
+  }, []);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -716,6 +742,7 @@ const Dashboard = () => {
           </div>
         </>
       )}
+      <ToastContainer />
     </DashboardLayout>
   );
 };

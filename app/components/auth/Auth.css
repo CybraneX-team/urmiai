@@ -204,6 +204,13 @@
   cursor: not-allowed;
 }
 
+.form-help {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.6);
+  margin-top: 0.5rem;
+  font-style: italic;
+}
+
 .form-options {
   display: flex;
   justify-content: space-between;

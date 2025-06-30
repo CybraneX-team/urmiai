@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
-  FaEnvelope, 
+  FaPhone, 
   FaKey, 
   FaArrowLeft, 
   FaShieldAlt, 
@@ -10,49 +10,23 @@ import {
 } from 'react-icons/fa';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { useAuth } from '../context/AuthContext';
 import '../components/auth/Auth.css';
 
 export default function ForgotPasswordRoute() {
-  const [email, setEmail] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [step, setStep] = useState<'request' | 'success'>('request');
-  
-  const { resetPassword } = useAuth();
   const navigate = useNavigate();
   
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  useEffect(() => {
+    // Show message and redirect after a delay
+    toast.info('We now use phone authentication. Redirecting to login...');
+    const timer = setTimeout(() => {
+      navigate('/login');
+    }, 3000);
     
-    if (!email.trim()) {
-      return toast.error('Please enter your email address');
-    }
-    
-    try {
-      setLoading(true);
-      await resetPassword(email);
-      
-      setStep('success');
-      toast.success('Password reset link sent to your email!');
-    } catch (error: any) {
-      let errorMessage = 'Failed to reset password';
-      
-      if (error.code === 'auth/user-not-found') {
-        errorMessage = 'No account found with this email';
-      } else if (error.code === 'auth/invalid-email') {
-        errorMessage = 'Invalid email address';
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
-      
-      toast.error(errorMessage);
-    } finally {
-      setLoading(false);
-    }
-  };
+    return () => clearTimeout(timer);
+  }, [navigate]);
   
-  const handleBackToLogin = () => {
-    navigate('/login', { state: { passwordReset: step === 'success' } });
+  const handleGoToLogin = () => {
+    navigate('/login');
   };
   
   return (
@@ -75,31 +49,31 @@ export default function ForgotPasswordRoute() {
         <div className="auth-banner">
           <div className="banner-content">
             <div className="banner-logo">
-              <FaKey className="logo-icon" />
+              <FaPhone className="logo-icon" />
               <span>URMI</span>
             </div>
             
-            <h2 className="banner-title">Reset Password</h2>
-            <p className="banner-subtitle">We'll help you get back into your account</p>
+            <h2 className="banner-title">Account Recovery</h2>
+            <p className="banner-subtitle">We've simplified the process for you</p>
             
             <div className="banner-features">
               <div className="feature-item">
                 <span className="feature-icon">
                   <FaShieldAlt />
                 </span>
-                <span>Secure Process</span>
+                <span>Secure OTP</span>
               </div>
               <div className="feature-item">
                 <span className="feature-icon">
                   <FaCheck />
                 </span>
-                <span>Quick Recovery</span>
+                <span>Instant Access</span>
               </div>
               <div className="feature-item">
                 <span className="feature-icon">
                   <FaUserLock />
                 </span>
-                <span>Email Verification</span>
+                <span>Phone Verification</span>
               </div>
             </div>
           </div>
@@ -108,89 +82,46 @@ export default function ForgotPasswordRoute() {
         {/* Right form section */}
         <div className="auth-form-container">
           <div className="auth-header">
-            <h1 className="auth-title">Reset Password</h1>
+            <h1 className="auth-title">No Password Reset Needed</h1>
             <p className="auth-subtitle">
-              {step === 'request'
-                ? 'Enter your email to receive a reset link'
-                : 'Check your email for reset instructions'}
+              We now use phone number authentication with OTP verification
             </p>
           </div>
           
-          {step === 'request' ? (
-            <form onSubmit={handleSubmit} className="auth-form">
-              <div className="form-group">
-                <label htmlFor="email" className="form-label">
-                  <FaEnvelope className="input-icon" /> Email Address
-                </label>
-                <input
-                  type="email"
-                  id="email"
-                  className="form-input"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  placeholder="your@email.com"
-                  disabled={loading}
-                  autoFocus
-                />
-              </div>
-              
+          <div className="success-container">
+            <div className="success-message">
+              <strong>Good news!</strong> You don't need to reset your password anymore. 
+              We've switched to a more secure phone-based authentication system.
+            </div>
+            
+            <div className="reset-info">
+              <p>Here's how it works:</p>
+              <ul>
+                <li>Enter your phone number on the login page</li>
+                <li>Receive an instant OTP via SMS</li>
+                <li>Enter the code to access your account</li>
+                <li>No passwords to remember!</li>
+              </ul>
+            </div>
+            
+            <div style={{ display: 'flex', gap: '1rem', flexDirection: 'column', marginTop: '2rem' }}>
               <button 
-                type="submit" 
+                type="button" 
                 className="auth-btn primary-btn"
-                disabled={loading}
+                onClick={handleGoToLogin}
               >
-                {loading ? 'Sending...' : 'Send Reset Link'}
+                <FaPhone /> Go to Login
               </button>
               
               <button 
                 type="button"
                 className="auth-btn secondary-btn"
-                onClick={handleBackToLogin}
-                disabled={loading}
+                onClick={handleGoToLogin}
               >
                 <FaArrowLeft /> Back to Login
               </button>
-              
-              <div className="auth-footer">
-                Remember your password?{' '}
-                <Link to="/login" className="auth-link">Sign In</Link>
-              </div>
-            </form>
-          ) : (
-            <div className="success-container">
-              <div className="success-message">
-                We've sent a password reset link to <strong>{email}</strong>. Please check your email and follow the instructions to reset your password.
-              </div>
-              
-              <div className="reset-info">
-                <p>Didn't receive the email?</p>
-                <ul>
-                  <li>Check your spam or junk folder</li>
-                  <li>Verify you entered the correct email</li>
-                  <li>Wait a few minutes for the email to arrive</li>
-                </ul>
-              </div>
-              
-              <div style={{ display: 'flex', gap: '1rem', flexDirection: 'column', marginTop: '2rem' }}>
-                <button 
-                  type="button" 
-                  className="auth-btn primary-btn"
-                  onClick={() => setStep('request')}
-                >
-                  Try Again
-                </button>
-                
-                <button 
-                  type="button"
-                  className="auth-btn secondary-btn"
-                  onClick={handleBackToLogin}
-                >
-                  Back to Login
-                </button>
-              </div>
             </div>
-          )}
+          </div>
         </div>
       </div>
     </div>

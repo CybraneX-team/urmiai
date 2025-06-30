@@ -1,14 +1,20 @@
-import { initializeApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, GithubAuthProvider, TwitterAuthProvider } from 'firebase/auth';
+import { initializeApp } from "firebase/app";
+import {
+  getAuth,
+  GoogleAuthProvider,
+  GithubAuthProvider,
+  TwitterAuthProvider,
+} from "firebase/auth";
 
 // Firebase configuration using environment variables with fallbacks
 const firebaseConfig = {
-    apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyDtFa1KdF76kh-LnC3Q3JJ3BFuzBozYmfw",
-    authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "urmi-b9868.firebaseapp.com",
-    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "urmi-b9868",
-    storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "urmi-b9868.firebasestorage.app",
-    messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "1005549801381",
-    appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:1005549801381:web:c452e3b14fe90ababc624c",
+    apiKey: "AIzaSyAGZFe_oZ_2lc_Vh6_MY4QnL_WxaaEc-is",
+    authDomain: "urmi-ai-403aa.firebaseapp.com",
+    projectId: "urmi-ai-403aa",
+    storageBucket: "urmi-ai-403aa.firebasestorage.app",
+    messagingSenderId: "693851303474",
+    appId: "1:693851303474:web:0f39827a396cd17046562b",
+    measurementId: "G-B1KK2ZX9VM"
 };
 
 // Initialize Firebase
@@ -20,4 +26,4 @@ const googleProvider = new GoogleAuthProvider();
 const githubProvider = new GithubAuthProvider();
 const twitterProvider = new TwitterAuthProvider();
 
-export { auth, googleProvider, githubProvider, twitterProvider }; 
+export { auth, googleProvider, githubProvider, twitterProvider };
